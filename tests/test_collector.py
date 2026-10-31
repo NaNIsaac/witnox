@@ -45,7 +45,7 @@ def test_cli_version(capsys):
     with pytest.raises(SystemExit) as exc:
         main(["--version"])
     assert exc.value.code == 0
-    assert "0.0.1" in capsys.readouterr().out
+    assert "0.1.0" in capsys.readouterr().out
 
 
 def test_progress_stderr_preserves_json_stdout(tmp_path: Path, capsys):
