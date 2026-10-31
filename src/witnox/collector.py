@@ -10,6 +10,8 @@ from pathlib import Path
 
 from tqdm import tqdm
 
+from .commands import count_commands, parse_shell
+
 
 def _timestamp(value: object) -> datetime | None:
     if not isinstance(value, str):
@@ -28,6 +30,7 @@ def collect_claude(
     days: int = 7,
     now: datetime | None = None,
     progress: bool | None = None,
+    include_commands: bool = False,
 ) -> dict:
     """Count distinct assistant tool-use blocks without retaining arguments or message content.
 
@@ -41,6 +44,8 @@ def collect_claude(
     cutoff = (now or datetime.now(UTC)) - timedelta(days=days)
     counts: Counter[str] = Counter()
     seen: set[tuple[str, str]] = set()
+    shell_invocations: list[tuple[str, str | None]] = []
+    shell_tool_calls = 0
     stores = sorted(p for p in root.glob(".claude*") if p.is_dir())
     paths = sorted(
         path
@@ -92,12 +97,27 @@ def collect_claude(
                             if key not in seen:
                                 seen.add(key)
                                 counts[name] += 1
+                                if include_commands and name in {"Bash", "PowerShell"}:
+                                    shell_tool_calls += 1
+                                    data = block.get("input")
+                                    if isinstance(data, dict):
+                                        command = data.get("command")
+                                        if isinstance(command, str):
+                                            shell_invocations.extend(parse_shell(command, name))
             except OSError:
                 continue
-    return {
+    result = {
         "source": "claude",
         "days": days,
         "files_scanned": len(paths),
         "tool_calls": sum(counts.values()),
         "tools": dict(counts.most_common()),
     }
+    if include_commands:
+        result["commands"] = {
+            "shell_tool_calls": shell_tool_calls,
+            **count_commands(shell_invocations),
+            "method": "conservative_estimate_not_execution_trace",
+        }
+    return result
+
