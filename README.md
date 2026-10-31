@@ -2,11 +2,11 @@
 
 **Local-first observability and behavioral analytics for AI coding agents.**
 
-Witnox is an independent, read-only project for understanding how coding agents use tools, time and tokens. It does not require Herdr or ORC. Early builds focus on safe local aggregation of Claude Code JSONL sessions; other agents, shell subcommand parsing, token attribution and cross-agent comparisons are planned, **not implemented yet**.
+Witnox is an independent, read-only project for understanding how coding agents use tools, time and tokens. It does not require Herdr or ORC. Early builds focus on safe local aggregation of Claude Code JSONL sessions; other agents, full shell parsing, token attribution and cross-agent comparisons are planned, **not implemented yet**.
 
 ## Development status
 
-**v0.1.0 initial release.** The supported command aggregates Claude Code tool-use counts; no shell subcommand parsing or automatic monitoring yet.
+**v0.1.0 initial release.** The supported command aggregates Claude Code tool-use counts; a conservative shell executable/subcommand estimator is available in development, but automatic monitoring is not implemented.
 
 ## Quick start
 
@@ -25,6 +25,19 @@ uv run witnox report --root $HOME --days 7 --top 30
 ```
 
 Progress is shown with tqdm when stderr is an interactive terminal. Use `--progress` to force it or `--no-progress` to suppress it. Progress is written only to stderr, so `--json` stdout remains machine-readable.
+
+## Shell command estimates (development branch)
+
+```powershell
+uv run witnox commands --root $HOME --days 7 --top 40
+uv run witnox commands --group-by executable --days 7
+uv run witnox commands --days 7 --json --no-progress
+```
+
+Counts represent recognizable commands in submitted Bash/PowerShell tool inputs,
+**not confirmed process executions**. Complex scripts, heredocs and unknown commands
+are skipped to reduce false positives. Only allowlisted executable and subcommand names
+are reported, never file paths or command arguments.
 
 ## Privacy and boundaries
 
