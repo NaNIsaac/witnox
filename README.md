@@ -6,7 +6,7 @@ Witnox is an independent, read-only project for understanding how coding agents 
 
 ## Development status
 
-**0.0.1 scaffold (pre-alpha), not a v0.1.0 release.** Initial command: aggregate tool-use counts; no command parsing or automatic monitoring yet.
+**v0.1.0 initial release.** The supported command aggregates Claude Code tool-use counts; no shell subcommand parsing or automatic monitoring yet.
 
 ## Quick start
 
@@ -41,7 +41,7 @@ Progress is shown with tqdm when stderr is an interactive terminal. Use `--progr
 2. Separate Claude Bash and PowerShell parser with conservative counting and measurable uncertainty.
 3. Codex and Gemini adapters with documented schema and coverage limits.
 4. Optional incremental local SQLite index and reproducible cross-agent efficiency comparisons.
-5. `v0.1.0`: complete tested minimal CLI, build artifacts and publishing checklist; release only after owner review.
+5. Post-v0.1.0: add verified shell metrics and cross-agent comparison.
 
 ## Publishing
 
