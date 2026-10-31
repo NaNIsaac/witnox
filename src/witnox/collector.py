@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import sys
 from collections import Counter
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from tqdm import tqdm
@@ -15,10 +15,10 @@ def _timestamp(value: object) -> datetime | None:
     if not isinstance(value, str):
         return None
     try:
-        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        parsed = datetime.fromisoformat(value[:-1] + "+00:00" if value.endswith("Z") else value)
         if parsed.tzinfo is None:
             return None
-        return parsed.astimezone(timezone.utc)
+        return parsed.astimezone(UTC)
     except ValueError:
         return None
 
@@ -38,7 +38,7 @@ def collect_claude(
     """
     if days < 1:
         raise ValueError("days must be >= 1")
-    cutoff = (now or datetime.now(timezone.utc)) - timedelta(days=days)
+    cutoff = (now or datetime.now(UTC)) - timedelta(days=days)
     counts: Counter[str] = Counter()
     seen: set[tuple[str, str]] = set()
     stores = sorted(p for p in root.glob(".claude*") if p.is_dir())
