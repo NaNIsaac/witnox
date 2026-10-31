@@ -45,3 +45,29 @@ def test_cli_version(capsys):
         main(["--version"])
     assert exc.value.code == 0
     assert "0.0.1" in capsys.readouterr().out
+
+
+def test_progress_stderr_preserves_json_stdout(tmp_path: Path, capsys):
+    project = tmp_path / ".claude" / "projects" / "p"
+    project.mkdir(parents=True)
+    (project / "x.jsonl").write_text(
+        json.dumps({
+            "type": "assistant",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "message": {
+                "id": "message_test",
+                "content": [{"type": "tool_use", "id": "tool_test", "name": "Read"}],
+            },
+        }),
+        encoding="utf-8",
+    )
+    assert main(["report", "--root", str(tmp_path), "--json", "--progress"]) == 0
+    out = capsys.readouterr()
+    assert json.loads(out.out)["tools"] == {"Read": 1}
+    assert "Scanning Claude logs" in out.err
+    assert "Scanning Claude logs" not in out.out
+
+
+def test_no_progress_suppresses_stderr(tmp_path: Path, capsys):
+    assert main(["report", "--root", str(tmp_path), "--no-progress"]) == 0
+    assert capsys.readouterr().err == ""
