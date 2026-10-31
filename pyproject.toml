@@ -1,0 +1,29 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "witnox"
+version = "0.0.1"
+description = "Local-first observability and behavioral analytics for AI coding agents"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+authors = [{name = "Isaac Yong"}]
+keywords = ["coding-agents", "observability", "claude-code", "analytics"]
+classifiers = ["Development Status :: 2 - Pre-Alpha", "Programming Language :: Python :: 3", "License :: OSI Approved :: MIT License"]
+
+[project.scripts]
+witnox = "witnox.cli:main"
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "ruff>=0.8", "build>=1.2"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/witnox"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
