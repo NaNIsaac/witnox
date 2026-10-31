@@ -3,6 +3,7 @@ name: Publish to PyPI
 on:
   release:
     types: [published]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -11,6 +12,10 @@ jobs:
   publish:
     name: Build, verify and publish
     runs-on: ubuntu-latest
+    if: github.event_name == 'release' || github.ref == 'refs/heads/main'
+    environment:
+      name: release
+      url: https://pypi.org/project/witnox/
     permissions:
       contents: read
       id-token: write
@@ -22,6 +27,7 @@ jobs:
       - name: Ensure tag matches package version
         env:
           RELEASE_TAG: ${{ github.event.release.tag_name }}
+          EVENT_NAME: ${{ github.event_name }}
         run: |
           python - <<'PY'
           import os
@@ -30,8 +36,10 @@ jobs:
               version = tomllib.load(f)["project"]["version"]
           expected = f"v{version}"
           actual = os.environ["RELEASE_TAG"]
-          if actual != expected:
+          if os.environ["EVENT_NAME"] == "release" and actual != expected:
               raise SystemExit(f"Tag {actual!r} must equal {expected!r}")
+          if os.environ["EVENT_NAME"] != "release":
+              print(f"Manual publish from main for package version {version}")
           PY
       - name: Install and verify
         run: |
