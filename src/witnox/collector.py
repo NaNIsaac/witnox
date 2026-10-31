@@ -2,44 +2,62 @@
 
 from __future__ import annotations
 
-from collections import Counter
-from datetime import datetime, timedelta, timezone
-from pathlib import Path
 import json
+import sys
+from collections import Counter
+from datetime import UTC, datetime, timedelta
+from pathlib import Path
+
+from tqdm import tqdm
 
 
 def _timestamp(value: object) -> datetime | None:
     if not isinstance(value, str):
         return None
     try:
-        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        parsed = datetime.fromisoformat(value[:-1] + "+00:00" if value.endswith("Z") else value)
         if parsed.tzinfo is None:
             return None
-        return parsed.astimezone(timezone.utc)
+        return parsed.astimezone(UTC)
     except ValueError:
         return None
 
 
-def collect_claude(root: Path, days: int = 7, now: datetime | None = None) -> dict:
+def collect_claude(
+    root: Path,
+    days: int = 7,
+    now: datetime | None = None,
+    progress: bool | None = None,
+) -> dict:
     """Count distinct assistant tool-use blocks without retaining arguments or message content.
 
+    Progress goes to stderr; by default it is shown only on interactive terminals.
     The event ID within a file is used for deduplication. Repeated snapshots of the
     same assistant message are merged, while distinct blocks in one message are counted.
     This parser is intentionally conservative and does not infer shell commands.
     """
     if days < 1:
         raise ValueError("days must be >= 1")
-    cutoff = (now or datetime.now(timezone.utc)) - timedelta(days=days)
+    cutoff = (now or datetime.now(UTC)) - timedelta(days=days)
     counts: Counter[str] = Counter()
-    files = 0
     seen: set[tuple[str, str]] = set()
     stores = sorted(p for p in root.glob(".claude*") if p.is_dir())
-    for store in stores:
-        projects = store / "projects"
-        if not projects.is_dir():
-            continue
-        for path in projects.rglob("*.jsonl"):
-            files += 1
+    paths = sorted(
+        path
+        for store in stores
+        if (store / "projects").is_dir()
+        for path in (store / "projects").rglob("*.jsonl")
+    )
+    show_progress = sys.stderr.isatty() if progress is None else progress
+    with tqdm(
+        paths,
+        desc="Scanning Claude logs",
+        unit="file",
+        file=sys.stderr,
+        disable=not show_progress,
+        dynamic_ncols=True,
+    ) as files:
+        for path in files:
             try:
                 with path.open("r", encoding="utf-8", errors="replace") as stream:
                     for line in stream:
@@ -47,7 +65,7 @@ def collect_claude(root: Path, days: int = 7, now: datetime | None = None) -> di
                             event = json.loads(line)
                         except (ValueError, TypeError):
                             continue
-                        if event.get("type") != "assistant":
+                        if not isinstance(event, dict) or event.get("type") != "assistant":
                             continue
                         stamp = _timestamp(event.get("timestamp"))
                         if stamp is None or stamp < cutoff:
@@ -76,5 +94,10 @@ def collect_claude(root: Path, days: int = 7, now: datetime | None = None) -> di
                                 counts[name] += 1
             except OSError:
                 continue
-    return {"source": "claude", "days": days, "files_scanned": files,
-            "tool_calls": sum(counts.values()), "tools": dict(counts.most_common())}
+    return {
+        "source": "claude",
+        "days": days,
+        "files_scanned": len(paths),
+        "tool_calls": sum(counts.values()),
+        "tools": dict(counts.most_common()),
+    }

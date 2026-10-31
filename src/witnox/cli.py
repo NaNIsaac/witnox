@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+
 from . import __version__
 from .collector import collect_claude
 
@@ -18,11 +19,25 @@ def main(argv: list[str] | None = None) -> int:
     report.add_argument("--days", type=int, default=7)
     report.add_argument("--top", type=int, default=30)
     report.add_argument("--json", action="store_true")
+    group = report.add_mutually_exclusive_group()
+    group.add_argument(
+        "--progress",
+        dest="progress",
+        action="store_true",
+        default=None,
+        help="Always show a progress bar on stderr",
+    )
+    group.add_argument(
+        "--no-progress",
+        dest="progress",
+        action="store_false",
+        help="Disable progress output",
+    )
     args = parser.parse_args(argv)
     if args.command == "report":
         if args.days < 1 or args.top < 1:
             parser.error("--days and --top must be positive")
-        result = collect_claude(args.root, days=args.days)
+        result = collect_claude(args.root, days=args.days, progress=args.progress)
         if args.json:
             print(json.dumps(result, indent=2, ensure_ascii=False))
         else:
@@ -30,7 +45,7 @@ def main(argv: list[str] | None = None) -> int:
                 f"Claude Code | {args.days} days | "
                 f"files: {result['files_scanned']} | tool calls: {result['tool_calls']}"
             )
-            for name, count in list(result["tools"].items())[:args.top]:
+            for name, count in list(result["tools"].items())[: args.top]:
                 print(f"{name:36} {count:>8}")
             print("Read-only aggregates; no prompts, paths or command arguments emitted.")
     return 0
