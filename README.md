@@ -45,6 +45,6 @@ Progress is shown with tqdm when stderr is an interactive terminal. Use `--progr
 
 ## Publishing
 
-PyPI name availability is **not guaranteed** by search results. Before first release, verify registration, create a trusted publisher (GitHub Actions OIDC) in PyPI and test wheel/sdist and installation. No upload credential or publishing workflow is bundled in this scaffold.
+PyPI deployment is triggered by publishing a GitHub Release tagged exactly `v0.1.0` (matching `pyproject.toml`). The `.github/workflows/publish.yml` workflow tests with uv, builds distributions, and uploads using PyPI Trusted Publishing (OIDC). Configure the pending PyPI publisher for owner `NaNIsaac`, repository `witnox`, workflow `publish.yml`, and **no GitHub environment**. No API token is required.
 
 MIT licensed. See [LICENSE](LICENSE).
