@@ -11,18 +11,20 @@ Witnox is an independent, read-only project for understanding how coding agents 
 ## Quick start
 
 ```sh
-python -m pip install -e '.[dev]'
-witnox --version
-witnox report --days 7 --top 30
-witnox report --root /path/to/user-home --days 7 --json
-python -m pytest -q
+uv sync --extra dev
+uv run witnox --version
+uv run witnox report --days 7 --top 30
+uv run witnox report --root /path/to/user-home --days 7 --json
+uv run pytest -q
 ```
 
 Windows PowerShell:
 
 ```powershell
-witnox report --root $HOME --days 7 --top 30
+uv run witnox report --root $HOME --days 7 --top 30
 ```
+
+Progress is shown with tqdm when stderr is an interactive terminal. Use `--progress` to force it or `--no-progress` to suppress it. Progress is written only to stderr, so `--json` stdout remains machine-readable.
 
 ## Privacy and boundaries
 
