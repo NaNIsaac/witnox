@@ -45,6 +45,6 @@ Progress is shown with tqdm when stderr is an interactive terminal. Use `--progr
 
 ## Publishing
 
-PyPI deployment is triggered by publishing a GitHub Release tagged exactly `v0.1.0` (matching `pyproject.toml`). The `.github/workflows/publish.yml` workflow tests with uv, builds distributions, and uploads using PyPI Trusted Publishing (OIDC). Configure the pending PyPI publisher for owner `NaNIsaac`, repository `witnox`, workflow `publish.yml`, and **no GitHub environment**. No API token is required.
+PyPI deployment is triggered by publishing a GitHub Release tagged exactly `v0.1.0` (matching `pyproject.toml`). The `.github/workflows/publish.yml` workflow tests with uv, builds distributions, and uploads using PyPI Trusted Publishing (OIDC). Configure the pending PyPI publisher for owner `NaNIsaac`, repository `witnox`, workflow `publish.yml`, and GitHub environment `release` (create it in the repository's Settings → Environments). The publish job references this environment. For a failed initial publication from an older release tag, use the manual `workflow_dispatch` on `main` after this change is merged; re-running an old release job would continue using the workflow stored at the old tag. No API token is required.
 
 MIT licensed. See [LICENSE](LICENSE).
