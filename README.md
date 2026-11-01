@@ -2,7 +2,7 @@
 
 **Local-first observability and behavioral analytics for AI coding agents.**
 
-Witnox is an independent, read-only project for understanding how coding agents use tools, time and tokens. It does not require Herdr or ORC. Early builds focus on safe local aggregation of Claude Code JSONL sessions; other agents, full shell parsing, token attribution and cross-agent comparisons are planned, **not implemented yet**.
+Witnox is an independent, read-only project for understanding how coding agents use tools, time and tokens. It does not require Herdr or ORC. Early builds focus on safe local aggregation of Claude Code JSONL sessions; experimental Codex and Gemini collectors and pseudonymous Claude-store comparison are available in development. Full shell parsing, token attribution and verified cross-agent performance comparisons are **not implemented yet**.
 
 ## Development status
 
@@ -38,6 +38,25 @@ Counts represent recognizable commands in submitted Bash/PowerShell tool inputs,
 **not confirmed process executions**. Complex scripts, heredocs and unknown commands
 are skipped to reduce false positives. Only allowlisted executable and subcommand names
 are reported, never file paths or command arguments.
+
+## Multi-agent and multi-store (development)
+
+```powershell
+uv run witnox agents --root $HOME --days 7
+uv run witnox agents --days 30 --json
+```
+
+Claude stores `~/.claude*`, Codex rollouts in `~/.codex/sessions` and
+`~/.codex/archived_sessions`, and Gemini CLI JSON chats under
+`~/.gemini/tmp/*/chats` are independently counted. A Claude store
+is **not proof of a separate account**. Labels like `claude-1` are local
+pseudonyms based on directory ordering, not stable user identifiers.
+
+Codex and Gemini parsers recognize known formats conservatively.
+Unknown tool names are emitted as `other` to avoid leaking data.
+Unsupported or changed formats can yield zeros; this is not proof of no activity.
+Different agents may record tool requests differently, so raw counts
+are not comparable productivity scores.
 
 ## Privacy and boundaries
 

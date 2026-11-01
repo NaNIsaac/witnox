@@ -33,6 +33,7 @@ def collect_claude(
     progress: bool | None = None,
     include_commands: bool = False,
     progress_style: str = "auto",
+    stores: list[Path] | None = None,
 ) -> dict:
     """Count distinct assistant tool-use blocks without retaining arguments or message content.
 
@@ -48,7 +49,7 @@ def collect_claude(
     seen: set[tuple[str, str]] = set()
     shell_invocations: list[tuple[str, str | None]] = []
     shell_tool_calls = 0
-    stores = sorted(p for p in root.glob(".claude*") if p.is_dir())
+    stores = sorted(p for p in root.glob(".claude*") if p.is_dir()) if stores is None else stores
     paths = sorted(
         path
         for store in stores
