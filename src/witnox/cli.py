@@ -8,6 +8,7 @@ from pathlib import Path
 
 from . import __version__
 from .collector import collect_claude
+from .providers import collect_accounts
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -43,6 +44,11 @@ def main(argv: list[str] | None = None) -> int:
     group2 = commands.add_mutually_exclusive_group()
     group2.add_argument("--progress", dest="progress", action="store_true", default=None)
     group2.add_argument("--no-progress", dest="progress", action="store_false")
+    agents = sub.add_parser("agents", help="Compare Claude stores, Codex and Gemini locally")
+    agents.add_argument("--root", type=Path, default=Path.home())
+    agents.add_argument("--days", type=int, default=7)
+    agents.add_argument("--top", type=int, default=10)
+    agents.add_argument("--json", action="store_true")
     for target in (report, commands):
         target.add_argument("--progress-style", choices=["auto", "bar", "lines"],
                             default="auto", help="Progress display mode (auto is SSH-safe)")
@@ -80,6 +86,26 @@ def main(argv: list[str] | None = None) -> int:
             for name, count in list(metrics[key].items())[:args.top]:
                 print(f"{name:36} {count:>8}")
             print("Conservative estimates, not executions; complex scripts may be skipped.")
+    if args.command == "agents":
+        if args.days < 1 or args.top < 1:
+            parser.error("--days and --top must be positive")
+        result = collect_accounts(args.root, days=args.days)
+        if args.json:
+            print(json.dumps(result, ensure_ascii=False, indent=2))
+        else:
+            print(f"Witnox providers | last {args.days} days")
+            for item in result["providers"]:
+                print(f"{item['provider']:12} files={item['files_scanned']:>6} "
+                      f"tool calls={item['tool_calls']:>8}")
+            print("Claude stores (pseudonyms; not verified distinct accounts):")
+            for item in result["claude_stores"]:
+                print(f"  {item['store']:12} files={item['files_scanned']:>6} "
+                      f"tool calls={item['tool_calls']:>8}")
+            for name in ("codex", "gemini"):
+                print(f"{name} tools:")
+                for tool, count in list(result["details"][name]["tools"].items())[:args.top]:
+                    print(f"  {tool:32} {count:>8}")
+            print(result["note"])
     return 0
 
 
