@@ -1,5 +1,3 @@
-import os
-
 from witnox.cli import main
 
 
