@@ -43,11 +43,15 @@ def main(argv: list[str] | None = None) -> int:
     group2 = commands.add_mutually_exclusive_group()
     group2.add_argument("--progress", dest="progress", action="store_true", default=None)
     group2.add_argument("--no-progress", dest="progress", action="store_false")
+    for target in (report, commands):
+        target.add_argument("--progress-style", choices=["auto", "bar", "lines"],
+                            default="auto", help="Progress display mode (auto is SSH-safe)")
     args = parser.parse_args(argv)
     if args.command == "report":
         if args.days < 1 or args.top < 1:
             parser.error("--days and --top must be positive")
-        result = collect_claude(args.root, days=args.days, progress=args.progress)
+        result = collect_claude(args.root, days=args.days, progress=args.progress,
+                                progress_style=args.progress_style)
         if args.json:
             print(json.dumps(result, indent=2, ensure_ascii=False))
         else:
@@ -62,7 +66,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.days < 1 or args.top < 1:
             parser.error("--days and --top must be positive")
         result = collect_claude(args.root, days=args.days, progress=args.progress,
-                                include_commands=True)
+                                include_commands=True, progress_style=args.progress_style)
         metrics = result["commands"]
         if args.json:
             print(json.dumps(metrics, ensure_ascii=False, indent=2))

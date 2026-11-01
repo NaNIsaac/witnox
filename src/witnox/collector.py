@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
 from collections import Counter
 from datetime import UTC, datetime, timedelta
@@ -31,6 +32,7 @@ def collect_claude(
     now: datetime | None = None,
     progress: bool | None = None,
     include_commands: bool = False,
+    progress_style: str = "auto",
 ) -> dict:
     """Count distinct assistant tool-use blocks without retaining arguments or message content.
 
@@ -54,58 +56,80 @@ def collect_claude(
         for path in (store / "projects").rglob("*.jsonl")
     )
     show_progress = sys.stderr.isatty() if progress is None else progress
-    with tqdm(
-        paths,
-        desc="Scanning Claude logs",
-        unit="file",
-        file=sys.stderr,
-        disable=not show_progress,
-        dynamic_ncols=True,
-    ) as files:
-        for path in files:
-            try:
-                with path.open("r", encoding="utf-8", errors="replace") as stream:
-                    for line in stream:
-                        try:
-                            event = json.loads(line)
-                        except (ValueError, TypeError):
+    if progress_style not in {"auto", "bar", "lines"}:
+        raise ValueError("progress_style must be auto, bar or lines")
+    style = progress_style
+    if style == "auto":
+        # SSH wrappers may render carriage returns as new lines.
+        style = "lines" if os.environ.get("SSH_CONNECTION") or os.environ.get("SSH_CLIENT") else "bar"
+
+    def scan_paths():
+        if not show_progress:
+            yield from paths
+        elif style == "bar":
+            yield from tqdm(
+                paths, desc="Scanning Claude logs", unit="file", file=sys.stderr,
+                dynamic_ncols=False, ncols=72, ascii=True, mininterval=0.5, leave=False,
+            )
+        else:
+            total = len(paths)
+            previous_bucket = -1
+            if not total:
+                print("Scanning Claude logs: 0/0 (100%)", file=sys.stderr)
+            for index, path in enumerate(paths, 1):
+                yield path
+                bucket = (index * 10) // total
+                if bucket > previous_bucket:
+                    previous_bucket = bucket
+                    print(
+                        f"Scanning Claude logs: {index}/{total} ({index * 100 // total}%)",
+                        file=sys.stderr,
+                    )
+
+    for path in scan_paths():
+        try:
+            with path.open("r", encoding="utf-8", errors="replace") as stream:
+                for line in stream:
+                    try:
+                        event = json.loads(line)
+                    except (ValueError, TypeError):
+                        continue
+                    if not isinstance(event, dict) or event.get("type") != "assistant":
+                        continue
+                    stamp = _timestamp(event.get("timestamp"))
+                    if stamp is None or stamp < cutoff:
+                        continue
+                    msg = event.get("message")
+                    if not isinstance(msg, dict):
+                        continue
+                    content = msg.get("content")
+                    if not isinstance(content, list):
+                        continue
+                    for idx, block in enumerate(content):
+                        if not isinstance(block, dict) or block.get("type") != "tool_use":
                             continue
-                        if not isinstance(event, dict) or event.get("type") != "assistant":
+                        name = block.get("name")
+                        if not isinstance(name, str) or not name:
                             continue
-                        stamp = _timestamp(event.get("timestamp"))
-                        if stamp is None or stamp < cutoff:
-                            continue
-                        msg = event.get("message")
-                        if not isinstance(msg, dict):
-                            continue
-                        content = msg.get("content")
-                        if not isinstance(content, list):
-                            continue
-                        for idx, block in enumerate(content):
-                            if not isinstance(block, dict) or block.get("type") != "tool_use":
-                                continue
-                            name = block.get("name")
-                            if not isinstance(name, str) or not name:
-                                continue
-                            block_id = block.get("id")
-                            if not isinstance(block_id, str) or not block_id:
-                                msg_id = msg.get("id")
-                                if not isinstance(msg_id, str) or not msg_id:
-                                    continue  # cannot deduplicate reliably
-                                block_id = f"{msg_id}:{idx}"
-                            key = (str(path), block_id)
-                            if key not in seen:
-                                seen.add(key)
-                                counts[name] += 1
-                                if include_commands and name in {"Bash", "PowerShell"}:
-                                    shell_tool_calls += 1
-                                    data = block.get("input")
-                                    if isinstance(data, dict):
-                                        command = data.get("command")
-                                        if isinstance(command, str):
-                                            shell_invocations.extend(parse_shell(command, name))
-            except OSError:
-                continue
+                        block_id = block.get("id")
+                        if not isinstance(block_id, str) or not block_id:
+                            msg_id = msg.get("id")
+                            if not isinstance(msg_id, str) or not msg_id:
+                                continue  # cannot deduplicate reliably
+                            block_id = f"{msg_id}:{idx}"
+                        key = (str(path), block_id)
+                        if key not in seen:
+                            seen.add(key)
+                            counts[name] += 1
+                            if include_commands and name in {"Bash", "PowerShell"}:
+                                shell_tool_calls += 1
+                                data = block.get("input")
+                                if isinstance(data, dict):
+                                    command = data.get("command")
+                                    if isinstance(command, str):
+                                        shell_invocations.extend(parse_shell(command, name))
+        except OSError:
+            continue
     result = {
         "source": "claude",
         "days": days,
