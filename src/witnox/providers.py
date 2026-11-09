@@ -72,7 +72,7 @@ def collect_codex(root: Path, cutoff: datetime) -> dict:
                             continue
                         # Deduplicate by call_id if present, otherwise JSONL line identity.
                         call_id = payload.get("call_id")
-                        marker = call_id if isinstance(call_id, str) else f"line:{number}"
+                        marker = call_id if isinstance(call_id, str) and call_id else f"line:{number}"
                         key = (str(path), marker)
                         if key in seen:
                             continue
@@ -114,7 +114,7 @@ def collect_gemini(root: Path, cutoff: datetime) -> dict:
                     if not isinstance(call, dict):
                         continue
                     call_id = call.get("id")
-                    marker = call_id if isinstance(call_id, str) else f"{msg_index}:{index}"
+                    marker = call_id if isinstance(call_id, str) and call_id else f"{msg_index}:{index}"
                     key = (str(path), marker)
                     if key in seen:
                         continue
