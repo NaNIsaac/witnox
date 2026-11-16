@@ -38,15 +38,16 @@ def collect_claude(
     """Count distinct assistant tool-use blocks without retaining arguments or message content.
 
     Progress goes to stderr; by default it is shown only on interactive terminals.
-    The event ID within a file is used for deduplication. Repeated snapshots of the
-    same assistant message are merged, while distinct blocks in one message are counted.
+    The tool-use ID is used for deduplication across all files, because a session copied
+    into another store or project folder keeps its IDs. Repeated snapshots of the same
+    assistant message are merged, while distinct blocks in one message are counted.
     This parser is intentionally conservative and does not infer shell commands.
     """
     if days < 1:
         raise ValueError("days must be >= 1")
     cutoff = (now or datetime.now(UTC)) - timedelta(days=days)
     counts: Counter[str] = Counter()
-    seen: set[tuple[str, str]] = set()
+    seen: set[str] = set()
     shell_invocations: list[tuple[str, str | None]] = []
     shell_tool_calls = 0
     stores = sorted(p for p in root.glob(".claude*") if p.is_dir()) if stores is None else stores
@@ -118,9 +119,8 @@ def collect_claude(
                             if not isinstance(msg_id, str) or not msg_id:
                                 continue  # cannot deduplicate reliably
                             block_id = f"{msg_id}:{idx}"
-                        key = (str(path), block_id)
-                        if key not in seen:
-                            seen.add(key)
+                        if block_id not in seen:
+                            seen.add(block_id)
                             counts[name] += 1
                             if include_commands and name in {"Bash", "PowerShell"}:
                                 shell_tool_calls += 1

@@ -29,6 +29,21 @@ def test_deduplicates_snapshots_but_preserves_distinct_tools(tmp_path: Path):
     assert "PRIVATE" not in json.dumps(result)
 
 
+def test_session_copied_to_another_store_counts_once(tmp_path: Path):
+    event = {
+        "type": "assistant", "timestamp": "2026-10-31T00:00:00Z",
+        "message": {"id": "msg_1", "content": [
+            {"type": "tool_use", "id": "tool_a", "name": "Bash", "input": {"command": "git status"}},
+        ]},
+    }
+    for store in (".claude", ".claude-worker-a"):
+        project = tmp_path / store / "projects" / "p"
+        project.mkdir(parents=True)
+        (project / "s.jsonl").write_text(json.dumps(event), encoding="utf-8")
+    result = collect_claude(tmp_path, now=datetime(2026, 10, 31, tzinfo=UTC))
+    assert result["tool_calls"] == 1
+
+
 def test_skips_old_events(tmp_path: Path):
     project = tmp_path / ".claude-alt" / "projects" / "p"
     project.mkdir(parents=True)
