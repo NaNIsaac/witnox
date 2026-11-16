@@ -64,7 +64,7 @@ are not comparable productivity scores.
 - Reads `.claude*/projects/**/*.jsonl` but does not modify it.
 - Only counts tool names. Does **not** save or print user prompts, raw commands, file paths, tool arguments, or tokens.
 - CLI JSON contains aggregates only. Consider aggregate information potentially sensitive before sharing publicly.
-- Repeated snapshots are deduplicated by tool-use ID within a file. Logs without stable identifiers may be skipped.
+- Repeated snapshots are deduplicated by tool-use ID across all files, so a session copied into another store counts once. Logs without stable identifiers may be skipped.
 - No claims that a tool call equals a task, a successful result, or an actual subprocess execution.
 
 ## Roadmap
